@@ -1,0 +1,5 @@
+torch
+zetascale
+swarms
+fastapi
+uvicorn
