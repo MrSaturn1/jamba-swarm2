@@ -11,6 +11,13 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+export const metadata: Metadata = {
+  title: 'Swarms',
+  icons: {
+    icon: '/swarms-icon-wb.svg', // This path is relative to the `public` folder
+  },
+}
+
 const Layout: FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <html lang="en">

@@ -104,25 +104,40 @@ You're the swarm orchestrator agent
 
 """
 
+class Agent:
+    def __init__(self, agent_name, system_prompt, agent_description, llm, max_loops=1, autosave=True, dynamic_temperature_enabled=True, dashboard=False, verbose=True, streaming_on=True, saved_state_path=None):
+        self.agent_name = agent_name
+        self.system_prompt = system_prompt
+        self.agent_description = agent_description
+        self.llm = llm
+        self.max_loops = max_loops
+        self.autosave = autosave
+        self.dynamic_temperature_enabled = dynamic_temperature_enabled
+        self.dashboard = dashboard
+        self.verbose = verbose
+        self.streaming_on = streaming_on
+        self.saved_state_path = saved_state_path
+        self.short_memory = []  # Assume we're using a list for short_memory
 
-# Initialize the agent
-planning_agent = Agent(
-   agent_name="Boss Director",
-   system_prompt=BOSS_PLANNER,
-   agent_description="Generates a spec of agents for the problem at hand.",
-   llm=model,
-   max_loops=1,
-   autosave=True,
-   dynamic_temperature_enabled=True,
-   dashboard=False,
-   verbose=True,
-   streaming_on=True,
-   # interactive=True, # Set to False to disable interactive mode
-   saved_state_path="accounting_agent.json",
-   # tools=[calculate_profit, generate_report],
-   # docs_folder="docs",
-   # pdf_path="docs/accounting_agent.pdf",
-   # tools=[browser_automation],
-)
+    def save_state(self):
+        return {
+            'short_memory': self.short_memory,
+            # Add other stateful attributes as needed
+        }
+
+    def load_state(self, state):
+        self.short_memory = state['short_memory']
+        # Load other stateful attributes as needed
+
+    def run(self, task):
+        # Process the new task
+        response = self.generate_response(task)
+        self.short_memory.append(response)
+        return response
+
+    def generate_response(self, task):
+        # Implement the logic to generate a response based on the task
+        # This might involve calling the LLM, processing the input, etc.
+        pass
 
 # out = planning_agent.run("Create a swarm of agents for automating customer support for an e-commerce platform.")

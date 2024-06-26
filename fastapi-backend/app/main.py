@@ -9,6 +9,11 @@ import asyncio
 import logging
 from .agent_planner import planning_agent
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+session_agents = {}
+
 app = FastAPI()
 
 # Set up CORS
@@ -46,13 +51,29 @@ class JambaSwarmResponse(BaseModel):
     timestamp: int = int(time.time())
     response: Optional[str] = None
 
-# Example generator for planning updates
-async def planning_stream(task: str):
-    out = planning_agent.run(task)  # Use the provided task
-    print('here')
-    await asyncio.sleep(1)  # Use asyncio.sleep for asynchronous context
-    memory = planning_agent.short_memory.return_history_as_string()
-    yield f"data: {json.dumps({'memory': memory})}\n\n"
+async def planning_stream(task: str, session_id: str):
+    logger.info(f"Starting planning stream for task: {task} in session: {session_id}")
+    agent = session_agents[session_id]
+    out = agent.run(task)
+    logger.info(f"Planning agent run completed. Output: {out}")
+    
+    full_memory = agent.short_memory.return_history_as_string()
+    logger.info(f"Full memory for session {session_id}: {full_memory}")
+    
+    memory_chunks = full_memory.split('\n')
+    
+    for chunk in memory_chunks:
+        if chunk.strip():
+            logger.info(f"Yielding chunk for session {session_id}: {chunk}")
+            yield f"data: {json.dumps({'memory': chunk})}\n\n"
+            await asyncio.sleep(0.1)
+    
+    yield f"data: {json.dumps({'memory': 'END_OF_STREAM'})}\n\n"
+
+    # Save the session state after processing
+    session_states[session_id] = json.dumps(session_agents[session_id].save_state())
+    
+    logger.info(f"Planning stream completed for session {session_id}")
 
 # Example generator for task updates
 async def task_stream():
@@ -65,8 +86,13 @@ async def task_stream():
     yield f"data: {json.dumps({'tasks': tasks})}\n\n"
 
 @app.get("/planning/stream")
-async def planning_updates(task: str = Query(...)):
-    return StreamingResponse(planning_stream(task), media_type="text/event-stream")
+async def planning_updates(task: str = Query(...), session_id: str = Query(...)):
+    if session_id not in session_agents:
+        session_agents[session_id] = PlanningAgent()
+        if session_id in session_states:
+            session_agents[session_id].load_state(json.loads(session_states[session_id]))
+    
+    return StreamingResponse(planning_stream(task, session_id), media_type="text/event-stream")
 
 @app.get("/tasks/stream")
 async def task_updates():
